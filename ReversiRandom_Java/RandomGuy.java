@@ -51,7 +51,7 @@ class RandomGuy {
                 myMove = move();
 
                 //myMove = generator.nextInt(numValidMoves);        // select a move randomly
-                
+                getValidMoves(round, state);
                 String sel = validMoves[myMove] / 8 + "\n" + validMoves[myMove] % 8;
                 
                 System.out.println("Selection: " + validMoves[myMove] / 8 + ", " + validMoves[myMove] % 8);
@@ -73,71 +73,81 @@ class RandomGuy {
         // just move randomly for now
 //        int myMove = generator.nextInt(numValidMoves);
 //        System.out.println("Random Move: " + myMove);
-        for(int i = 0; i < numValidMoves; i++) {
-            System.out.println("Valid Moves: " + validMoves[i]);
-        }
 
-//        int coin_parity_heuristic = get_coin_parity_heuristic(state);
-//        System.out.println("Coin Parity Heuristic: " + coin_parity_heuristic);
-        int depth = 1;
-        int maximizing_player = 1;
-        int myMove = minimax(state, depth, maximizing_player);
-        System.out.println("Me: " + me);
+
+        int depth = 3;
+        boolean maximizing_player = true;
+        int[] result = minimax(state, depth, round, maximizing_player);
+        int myMove = result[1];
         System.out.println("My move: " + myMove);
         return myMove;
     }
 
-    private int minimax(int state[][], int depth, int maximizing_player) {
-        int maxEval = -100;
-        int minEval = 100;
-        int eval = 0;
-        int child = -1;
-        int bestMove = -1;
+    private int[] minimax(int state[][], int depth, int round, boolean maximizing_player) {
+        int maxEval = -1000;
+        int minEval = 1000;
+        int eval;
+        int bestMove;
         int bestMoveIndex = -1;
         int tempState[][] = new int[8][8];
+        int futureValidMoves[] = new int[64];
+        int futureNumValidMoves;
+
 
         // Evaluates the heuristic value of the state
         if (depth == 0) {
             // get corner heuristic
             // get mobitilty heuristic
 
-            return get_coin_parity_heuristic(state);
+            return new int[]{get_coin_parity_heuristic(state), -1};
         }
 
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                tempState[i][j] = state[i][j];
-            }
-        }
+//        for (int i = 0; i < 8; i++) {
+//            for (int j = 0; j < 8; j++) {
+//                tempState[i][j] = state[i][j];
+//            }
+//        }
 
-        if (me == maximizing_player) {
-            for (int moveIndex = 0; moveIndex < numValidMoves; moveIndex++) {
-                int move = validMoves[moveIndex];
+        getValidMoves(round, state);
+        futureNumValidMoves = numValidMoves;
+        if (numValidMoves >= 0) System.arraycopy(validMoves, 0, futureValidMoves, 0, numValidMoves);
+
+        if (maximizing_player) {
+            for (int moveIndex = 0; moveIndex < futureNumValidMoves; moveIndex++) {
+                int move = futureValidMoves[moveIndex];
                 int i = move / 8;
                 int j = move % 8;
                 if (state[i][j] == 0) {
-                    tempState = getNewState(state, move, me);
-                    eval = minimax(tempState, depth-1, maximizing_player);
-                    if (eval >= maxEval) {
+                    tempState = getNewState(state, move, me, round);
+                    System.out.println("Temporary State");
+                    printState(tempState);
+                    int[] result = minimax(tempState, depth-1, round+1, false);
+                    eval = result[0];
+                    System.out.println("Eval: " + eval);
+                    if (eval > maxEval) {
                         maxEval = eval;
                         bestMove = move;
                         bestMoveIndex = moveIndex;
-                        System.out.println("Best Move: " + bestMove + " MaxEval: " + maxEval);
+                        System.out.println("Best Move: " + bestMove + " MaxEval: " + maxEval + " Move Index: " + moveIndex);
                     }
                 }
             }
-            return bestMoveIndex;
+            return new int[]{maxEval, bestMoveIndex};
         }
 
         else {
-            for (int moveIndex = 0; moveIndex < numValidMoves; moveIndex++) {
-                int move = validMoves[moveIndex];
+            for (int moveIndex = 0; moveIndex < futureNumValidMoves; moveIndex++) {
+                int move = futureValidMoves[moveIndex];
                 int i = move / 8;
                 int j = move % 8;
                 if (state[i][j] == 0) {
-                    tempState = getNewState(state, move, me);
-                    eval = minimax(tempState, depth-1, maximizing_player);
-                    if (eval <= minEval) {
+                    tempState = getNewState(state, move, 1, round);
+                    System.out.println("Temporary State");
+                    printState(tempState);
+                    int[] result = minimax(tempState, depth-1, round+1, true);
+                    eval = result[0];
+                    System.out.println("Eval: " + eval);
+                    if (eval < minEval) {
                         minEval = eval;
                         bestMove = move;
                         bestMoveIndex = moveIndex;
@@ -145,11 +155,11 @@ class RandomGuy {
                     }
                 }
             }
-            return bestMoveIndex;
+            return new int[]{minEval, bestMoveIndex};
         }
     }
 
-    private static int[][] getNewState(int state[][], int move, int player) {
+    private static int[][] getNewState(int state[][], int move, int player, int round) {
         int newState[][] = new int[8][8];
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
@@ -159,6 +169,11 @@ class RandomGuy {
 
         int row = move / 8;
         int col = move % 8;
+
+        if (round < 4) {
+            newState[row][col] = player;
+            return newState;
+        }
 
         for (int[] dir : DIRECTIONS) {
             int r = row + dir[0];
@@ -180,61 +195,16 @@ class RandomGuy {
 
         return newState;
     }
-//    private int minimax(int state[][], int depth, int maximizing_player) {
-//        int maxEval = -100;
-//        int minEval = 100;
-//        int eval = 0;
-//        int child = -1;
-//        int bestMove = -1;
-//        int tempState[][] = new int[8][8];
-//
-//        int i, j;
-//
-//        if (depth == 0) {
-//            return get_coin_parity_heuristic(state);
-//        }
-//
-//        if (me == maximizing_player) {
-//            for (i = 0; i < 8; i++) {
-//                for (j = 0; j < 8; j++) {
-//                    child = state[i][j];
-//                    if (child == 0) {
-//                        eval = minimax(state, depth-1, maximizing_player);
-//                        if (eval > maxEval) {
-//                            maxEval = eval;
-//                            bestMove = i*8 + j;
-//                            System.out.println("Best Move: " + bestMove + " MaxEval: " + maxEval);
-//                        }
-//                    }
-//                }
-//            }
-//            return bestMove;
-//        }
-//
-//        else {
-//            for (i = 0; i < 8; i++) {
-//                for (j = 0; j < 8; j++) {
-//                    child = state[i][j];
-//                    for(int move : validMoves) {
-//                        if (move == i*8 + j) {
-//                            if (child == 0) {
-//                                eval = minimax(state, depth-1, maximizing_player);
-////                                System.out.println("Eval: " + eval);
-//                                if (eval <= minEval) {
-//                                    minEval = eval;
-//                                    bestMove = i*8 + j;
-////                                    System.out.println("Best Move: " + bestMove + " MinEval: " + minEval);
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//            return bestMove;
-//        }
-//    }
-    
-    // generates the set of valid moves for the player; returns a list of valid moves (validMoves)
+
+    private void printState(int state[][]) {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                System.out.print(state[i][j]);
+            }
+            System.out.println();
+        }
+    }
+
     private void getValidMoves(int round, int state[][]) {
         int i, j;
         
@@ -359,15 +329,18 @@ class RandomGuy {
             }
         }
 
+        System.out.println("Future State");
+        printState(state);
+
         if (me == 1) {
-            heuristic = 100 * (my_tiles - opp_tiles) / (my_tiles + opp_tiles);
-        }
-        else {
             heuristic = 100 * (opp_tiles - my_tiles) / (my_tiles + opp_tiles);
         }
+        else {
+            heuristic = 100 * (my_tiles - opp_tiles) / (my_tiles + opp_tiles);
+        }
 
-//        System.out.println("RandomGuy Tiles: " + my_tiles);
-//        System.out.println("Human Tiles: " + opp_tiles);
+        System.out.println("RandomGuy Tiles: " + my_tiles);
+        System.out.println("Human Tiles: " + opp_tiles);
 
         return heuristic;
     }
