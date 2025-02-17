@@ -1,14 +1,7 @@
-import java.awt.*;
-import java.util.*;
-import java.awt.event.*;
-import java.lang.*;
 import java.io.*;
+import java.lang.*;
 import java.net.*;
-import javax.swing.*;
-import java.math.*;
-import java.text.*;
-import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
 
 class RandomGuy {
 
@@ -97,8 +90,25 @@ class RandomGuy {
 
         // Evaluates the heuristic value of the state
         if (depth == 0) {
-            int heuristicValue = get_coin_parity_heuristic(state);
-//            System.out.println("Leaf node reached. Heuristic value: " + heuristicValue);
+            int heuristicValue = 0;
+
+            if (round < 16) {
+                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.2) + 
+                                       (get_corner_control(state) * 0.5) + 
+                                       (get_mobility_heuristic(state) * 0.3));
+            } else if (round < 45) {
+                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.3) + 
+                                       (get_corner_control(state) * 0.5) + 
+                                       (get_mobility_heuristic(state) * 0.2));
+            } else {
+                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.4) + 
+                                       (get_corner_control(state) * 0.5) + 
+                                       (get_mobility_heuristic(state) * 0.1));
+            }
+            
+
+
+            // System.out.println("Leaf node reached. Heuristic value: " + heuristicValue);
             // get corner heuristic
             // get mobitilty heuristic
 
@@ -331,7 +341,46 @@ class RandomGuy {
         return false;
     }
 
-    private int get_coin_parity_heuristic(int state[][]) {
+    private double get_corner_control(int state[][]){
+        int random_corners=0;
+        int human_corners=0;
+        int available_corners = 0;
+
+        int[][] corners = {{0, 0}, {0, 7}, {7, 0}, {7, 7}};
+
+        for (int[] corner : corners) {
+            int i = corner[0], j = corner[1];
+            if (state[i][j] == 2) { // AI's piece
+                random_corners++;
+            } else if (state[i][j] == 1) { // Opponent's piece
+                human_corners++;
+            } else if (couldBe(state, i, j)) { // Empty and playable
+                available_corners++;
+            }
+        }
+
+        double corner_heuristic = 100 * (random_corners - human_corners) / 4.0;
+        double corner_move_bonus = 50 * (available_corners / 4.0);
+
+        return corner_heuristic + corner_move_bonus;
+    } 
+
+    private double get_mobility_heuristic(int state[][]){
+        double mobility_heuristic = 0;
+        int humanValidMoves, randomValidMoves;
+        me =2;
+        getValidMoves(round,state);
+        randomValidMoves= numValidMoves;
+
+        me=1;
+        getValidMoves(round, state);
+        humanValidMoves = numValidMoves;
+
+        mobility_heuristic = 100.0 *(randomValidMoves - humanValidMoves)/ (randomValidMoves + humanValidMoves);
+        return mobility_heuristic;
+    }
+    
+    private double get_coin_parity_heuristic(int state[][]) {
         int i, j;
         int random_tiles = 0;
         int human_tiles = 0;
