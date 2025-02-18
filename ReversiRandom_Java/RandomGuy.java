@@ -68,7 +68,7 @@ class RandomGuy {
 //        System.out.println("Random Move: " + myMove);
 
 
-        int depth = 10;
+        int depth = 5;
         boolean maximizing_player = true;
         int[] result = minimax(state, depth, round, maximizing_player, -100000, 100000);
         int myMove = result[1];
@@ -93,16 +93,16 @@ class RandomGuy {
             int heuristicValue = 0;
 
             if (round < 16) {
-                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.2) + 
-                                       (get_corner_control(state) * 0.5) + 
-                                       (get_mobility_heuristic(state) * 0.3));
+                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.15) + 
+                                       (get_corner_control(state) * 0.45) + 
+                                       (get_mobility_heuristic(state) * 0.4));
             } else if (round < 45) {
                 heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.3) + 
                                        (get_corner_control(state) * 0.5) + 
                                        (get_mobility_heuristic(state) * 0.2));
             } else {
-                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.4) + 
-                                       (get_corner_control(state) * 0.5) + 
+                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.35) + 
+                                       (get_corner_control(state) * 0.55) + 
                                        (get_mobility_heuristic(state) * 0.1));
             }
             
@@ -359,7 +359,7 @@ class RandomGuy {
             }
         }
 
-        double corner_heuristic = 100 * (random_corners - human_corners) / 4.0;
+        double corner_heuristic = 100 * (random_corners - human_corners);
         double corner_move_bonus = 50 * (available_corners / 4.0);
 
         return corner_heuristic + corner_move_bonus;
