@@ -41,10 +41,10 @@ def move(validMoves, round, me):
 def minimax(depth, round, me, maximizing, alpha, beta):
     global state
 
-    moves = getValidMoves(round, me)
-    if depth == 0 or not moves:
+    if depth == 0:
         return heuristic(me, round), 0
 
+    moves = getValidMoves(round, me)
     original_state = copy.deepcopy(state)
     best_value = float('-inf') if maximizing else float('inf')
     best_index = 0
