@@ -31,27 +31,31 @@ WEIGHTS = [
 # validMoves is a list of valid locations that you could place your "stone" on this turn
 # Note that "state" is a global variable 2D list that shows the state of the game
 def move(validMoves, round, me):
-    depth = 1
+    depth = 4
     maximizing = True
-    _, move_index = minimax(depth, round, me, maximizing, -1000000, 100000)
+    _, move_index = minimax(depth, round, me, me, True, -float('inf'), float('inf'))
 
     return move_index
 
 
-def minimax(depth, round, me, maximizing, alpha, beta):
+def minimax(depth, round, current_player, original_me, maximizing, alpha, beta):
     global state
 
     if depth == 0:
-        return heuristic(me, round), 0
+        return heuristic(original_me, round), 0
 
-    moves = getValidMoves(round, me)
+    moves = getValidMoves(round, current_player)
+    if not moves:
+        return heuristic(original_me, round), 0
+
     original_state = copy.deepcopy(state)
     best_value = float('-inf') if maximizing else float('inf')
     best_index = 0
+
     for i, move in enumerate(moves):
-        getNewState(move, me, round)
-        value, _ = minimax(depth - 1, round + 1, 1 if me == 2 else 2, not maximizing, alpha, beta)
-        state = original_state
+        getNewState(move, current_player, round)
+        value, _ = minimax(depth - 1, round + 1, 1 if current_player == 2 else 2, original_me, not maximizing, alpha, beta)
+        state = copy.deepcopy(original_state)
 
         if maximizing:
             if value > best_value:
@@ -63,25 +67,33 @@ def minimax(depth, round, me, maximizing, alpha, beta):
                 best_value = value
                 best_index = i
             beta = min(beta, best_value)
+
         if beta <= alpha:
             break
+
     return best_value, best_index
 
 
+def get_mobility_heuristic(me, round):
+    my_moves = len(getValidMoves(round, me))
+    opp = 1 if me == 2 else 2
+    opp_moves = len(getValidMoves(round, opp))
+    if my_moves + opp_moves == 0:
+        return 0
+    return 100 * (my_moves - opp_moves) / (my_moves + opp_moves)
+
 def heuristic(me, round):
-    # corner = get_corner_control(state, me)
-    # mobility = get_mobility_heuristic(state, me, round)
-    # parity = get_coin_parity_heuristic(me)
     position = get_positional_heuristic(me)
+    parity = get_coin_parity_heuristic(me)
+    mobility = get_mobility_heuristic(me, round)
 
-    # if round < 20:
-    #     return 0.3 * parity + 0.7 * position  # + 0.2 * corner
-    # elif round < 50:
-    #     return 0.6 * position + 0.4 * parity
-    # else:
-    #     return 0.9 * parity + 0.1 * position
+    if round < 20:
+        return 0.6 * position + 0.3 * mobility + 0.1 * parity
+    elif round < 50:
+        return 0.4 * position + 0.3 * mobility + 0.3 * parity
+    else:
+        return 0.1 * position + 0.3 * mobility + 0.6 * parity
 
-    return position
 
 
 def get_positional_heuristic(me):
@@ -277,4 +289,3 @@ if __name__ == "__main__":
     print(str(sys.argv[1]))
 
     playGame(int(sys.argv[2]), sys.argv[1])
-
