@@ -45,11 +45,12 @@ class RandomGuy {
             System.out.println("Read");
             readMessage();
 
+            System.out.println("me " + me);
+
             if (turn == me) {
                 System.out.println("Move");
                 getValidMoves(round, state);
                 myMove = move();
-                me = 2;
                 //myMove = generator.nextInt(numValidMoves);        // select a move randomly
                 getValidMoves(round, state);
                 String sel = validMoves[myMove] / 8 + "\n" + validMoves[myMove] % 8;
@@ -71,15 +72,19 @@ class RandomGuy {
     // Note that "state" is a global variable 2D list that shows the state of the game
     private int move() {
         // just move randomly for now
-//        int myMove = generator.nextInt(numValidMoves);
-//        System.out.println("Random Move: " + myMove);
+        int myMove;
+//        if (me == 1) {
+//            myMove = generator.nextInt(numValidMoves);
+//            System.out.println("Random Move: " + myMove);
+//        }
 
-
-        int depth = 10;
+//        else {
+        int depth = 8;
         boolean maximizing_player = true;
         int[] result = minimax(state, depth, round, maximizing_player, -100000, 100000);
-        int myMove = result[1];
+        myMove = result[1];
 //        System.out.println("My move: " + myMove);
+//        }
         return myMove;
     }
 
@@ -92,12 +97,32 @@ class RandomGuy {
         int tempState[][] = new int[8][8];
         int futureValidMoves[] = new int[64];
         int futureNumValidMoves;
+        int original_me = me;
 
 //        System.out.println("Minimax call - Depth: " + depth + ", Maximizing: " + maximizing_player);
 
         // Evaluates the heuristic value of the state
         if (depth == 0) {
-            int heuristicValue = get_coin_parity_heuristic(state);
+            int heuristicValue = 0;
+
+
+//            if (round < 16) {
+//                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.15) +
+//                        (get_corner_control(state) * 0.45) +
+//                        (get_mobility_heuristic(state) * 0.4));
+//            } else if (round < 45) {
+//                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.3) +
+//                        (get_corner_control(state) * 0.5) +
+//                        (get_mobility_heuristic(state) * 0.2));
+//            } else {
+//                heuristicValue = (int)((get_coin_parity_heuristic(state) * 0.35) +
+//                        (get_corner_control(state) * 0.55) +
+//                        (get_mobility_heuristic(state) * 0.1));
+//            }
+
+            heuristicValue = get_coin_parity_heuristic(state);
+
+
 //            System.out.println("Leaf node reached. Heuristic value: " + heuristicValue);
             // get corner heuristic
             // get mobitilty heuristic
@@ -105,34 +130,30 @@ class RandomGuy {
             return new int[]{heuristicValue, 0};
         }
 
-        if (maximizing_player) {
-            me = 2;
-        }
-        else {
-            me = 1;
-        }
+        int currentPlayer = maximizing_player ? 2 : 1;
 
+//        me = currentPlayer;
         getValidMoves(round, state);
 //        System.out.println("Valid moves at depth " + depth + ": " + Arrays.toString(Arrays.copyOf(validMoves, numValidMoves)));
         futureNumValidMoves = numValidMoves;
         if (numValidMoves >= 0) System.arraycopy(validMoves, 0, futureValidMoves, 0, numValidMoves);
-
+//        me = original_me;
         if (maximizing_player) {
             for (int moveIndex = 0; moveIndex < futureNumValidMoves; moveIndex++) {
                 int move = futureValidMoves[moveIndex];
                 int i = move / 8;
                 int j = move % 8;
-                me = 2;
                 if (state[i][j] == 0) {
 //                    System.out.println("Current State");
 //                    printState(state);
-                    tempState = getNewState(state, move, me, round);
+                    tempState = getNewState(state, move, currentPlayer, round);
 //                    System.out.println("Future State");
 //                    printState(tempState);
                     int[] result = minimax(tempState, depth-1, round+1, false, alpha, beta);
                     eval = result[0];
                     if (eval > maxEval) {
                         maxEval = eval;
+                        bestMove = move;
                         bestMoveIndex = moveIndex;
 //                        System.out.println("New best move found: " + bestMove + " with eval: " + maxEval);
                     }
@@ -151,11 +172,10 @@ class RandomGuy {
                 int move = futureValidMoves[moveIndex];
                 int i = move / 8;
                 int j = move % 8;
-                me = 1;
                 if (state[i][j] == 0) {
 //                    System.out.println("Current State");
 //                    printState(state);
-                    tempState = getNewState(state, move, me, round);
+                    tempState = getNewState(state, move, currentPlayer, round);
 //                    System.out.println("Future State");
 //                    printState(tempState);
                     int[] result = minimax(tempState, depth-1, round+1, true, alpha, beta);
@@ -163,10 +183,13 @@ class RandomGuy {
                     if (eval < minEval) {
                         minEval = eval;
                         bestMoveIndex = moveIndex;
+                        bestMove = move;
+//                        System.out.println("New best move found: " + bestMove + " with eval: " + minEval);
                     }
 
                     beta = Math.min(beta, eval);
                     if (beta <= alpha) {
+//                        System.out.println("Beta is less than alpha. Pruning.");
                         break;
                     }
                 }
@@ -219,7 +242,7 @@ class RandomGuy {
             for (int j = 0; j < 8; j++) {
                 System.out.print(state[i][j]);
             }
-            System.out.println();
+//            System.out.println();
         }
     }
 
@@ -360,6 +383,50 @@ class RandomGuy {
 //        System.out.println("RandomGuy tiles: " + random_tiles);
 
         return heuristic;
+    }
+
+    private double get_corner_control(int state[][]){
+        int random_corners=0;
+        int human_corners=0;
+        int available_corners = 0;
+
+        int[][] corners = {{0, 0}, {0, 7}, {7, 0}, {7, 7}};
+
+        for (int[] corner : corners) {
+            int i = corner[0], j = corner[1];
+            if (state[i][j] == 2) { // AI's piece
+                random_corners++;
+            } else if (state[i][j] == 1) { // Opponent's piece
+                human_corners++;
+            } else if (couldBe(state, i, j)) { // Empty and playable
+                available_corners++;
+            }
+        }
+
+        double corner_heuristic = 100 * (random_corners - human_corners);
+        double corner_move_bonus = 50 * (available_corners / 4.0);
+
+        return corner_heuristic + corner_move_bonus;
+    }
+
+    private double get_mobility_heuristic(int state[][]){
+        double mobility_heuristic = 0;
+        int humanValidMoves, randomValidMoves;
+
+        int original_me = me;
+
+        me =2;
+        getValidMoves(round,state);
+        randomValidMoves= numValidMoves;
+
+        me=1;
+        getValidMoves(round, state);
+        humanValidMoves = numValidMoves;
+
+        me = original_me;
+
+        mobility_heuristic = 100.0 *(randomValidMoves - humanValidMoves)/ (randomValidMoves + humanValidMoves);
+        return mobility_heuristic;
     }
     
     public void readMessage() {
